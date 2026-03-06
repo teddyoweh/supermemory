@@ -13,9 +13,9 @@ export const TOOL_DESCRIPTIONS = {
 	documentList:
 		"List stored documents with optional filtering by container tag, status, and pagination. Useful for browsing or managing saved content.",
 	documentDelete:
-		"Delete a document and its associated memories by document ID or customId. Deletes are permanent. Use when user wants to remove saved content.",
+		"Delete a specific document and its associated memories by document ID. Use when user wants to remove saved content.",
 	documentAdd:
-		"Add a new document (URL, text, or content) to memory. The content is queued for processing, and memories will be extracted automatically.",
+		"Add a new document (URL, text, or content) to memory. The content will be processed and memories will be extracted automatically.",
 	memoryForget:
 		"Forget (soft delete) a specific memory by ID or content match. The memory is marked as forgotten but not permanently deleted. Use when user wants to remove specific information from their profile.",
 } as const
@@ -31,15 +31,13 @@ export const PARAMETER_DESCRIPTIONS = {
 	containerTag: "Tag to filter/scope the operation (e.g., user ID, project ID)",
 	query: "Optional search query to include relevant search results",
 	offset: "Number of items to skip for pagination (default: 0)",
-	status:
-		"Filter documents by processing status (e.g., 'completed', 'processing', 'failed')",
+	status: "Filter documents by processing status (e.g., 'completed', 'processing', 'failed')",
 	documentId: "The unique identifier of the document to operate on",
 	content: "The content to add - can be text, URL, or other supported formats",
 	title: "Optional title for the document",
 	description: "Optional description for the document",
 	memoryId: "The unique identifier of the memory entry",
-	memoryContent:
-		"Exact content match of the memory entry to operate on (alternative to ID)",
+	memoryContent: "Exact content match of the memory entry to operate on (alternative to ID)",
 	reason: "Optional reason for forgetting this memory",
 } as const
 
