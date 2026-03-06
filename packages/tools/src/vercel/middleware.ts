@@ -11,6 +11,7 @@ import {
 	type Logger,
 	type PromptTemplate,
 	type MemoryMode,
+	type SearchMode,
 } from "../shared"
 import {
 	type LanguageModelCallOptions,
@@ -101,56 +102,32 @@ const convertToConversationMessages = (
 export const saveMemoryAfterResponse = async (
 	client: Supermemory,
 	containerTag: string,
-	conversationId: string | undefined,
+	conversationId: string,
 	assistantResponseText: string,
 	params: LanguageModelCallOptions,
 	logger: Logger,
 	apiKey: string,
 	baseUrl: string,
 ): Promise<void> => {
-	const customId = conversationId ? `conversation:${conversationId}` : undefined
-
 	try {
-		if (customId && conversationId) {
-			const conversationMessages = convertToConversationMessages(
-				params,
-				assistantResponseText,
-			)
+		const conversationMessages = convertToConversationMessages(
+			params,
+			assistantResponseText,
+		)
 
-			const response = await addConversation({
-				conversationId,
-				messages: conversationMessages,
-				containerTags: [containerTag],
-				apiKey,
-				baseUrl,
-			})
-
-			logger.info("Conversation saved successfully via /v4/conversations", {
-				containerTag,
-				conversationId,
-				messageCount: conversationMessages.length,
-				responseId: response.id,
-			})
-			return
-		}
-
-		const userMessage = getLastUserMessage(params)
-		const content = conversationId
-			? `${getConversationContent(params)} \n\n Assistant: ${assistantResponseText}`
-			: `User: ${userMessage} \n\n Assistant: ${assistantResponseText}`
-
-		const response = await client.add({
-			content,
+		const response = await addConversation({
+			conversationId,
+			messages: conversationMessages,
 			containerTags: [containerTag],
-			customId,
+			apiKey,
+			baseUrl,
 		})
 
-		logger.info("Memory saved successfully via /v3/documents", {
+		logger.info("Conversation saved successfully via /v4/conversations", {
 			containerTag,
-			customId,
-			content,
-			contentLength: content.length,
-			memoryId: response.id,
+			conversationId,
+			messageCount: conversationMessages.length,
+			responseId: response.id,
 		})
 	} catch (error) {
 		logger.error("Error saving memory", {
@@ -167,8 +144,8 @@ interface SupermemoryMiddlewareOptions {
 	containerTag: string
 	/** Supermemory API key */
 	apiKey: string
-	/** Optional conversation ID to group messages for contextual memory generation */
-	conversationId?: string
+	/** Conversation ID to group messages into a single document (maps to customId in Supermemory) */
+	conversationId: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -178,6 +155,15 @@ interface SupermemoryMiddlewareOptions {
 	 * - "full": Combines both profile and query-based results
 	 */
 	mode?: MemoryMode
+	/**
+	 * Search mode for memory retrieval:
+	 * - "memories": Search only memory entries (default)
+	 * - "hybrid": Search both memories AND document chunks (recommended for RAG)
+	 * - "documents": Search only document chunks
+	 */
+	searchMode?: SearchMode
+	/** Maximum number of search results to return (default: 10) */
+	searchLimit?: number
 	/**
 	 * Memory persistence mode:
 	 * - "always": Automatically save conversations as memories
@@ -194,8 +180,10 @@ interface SupermemoryMiddlewareContext {
 	client: Supermemory
 	logger: Logger
 	containerTag: string
-	conversationId?: string
+	conversationId: string
 	mode: MemoryMode
+	searchMode: SearchMode
+	searchLimit: number
 	addMemory: "always" | "never"
 	normalizedBaseUrl: string
 	apiKey: string
@@ -216,6 +204,8 @@ export const createSupermemoryContext = (
 		conversationId,
 		verbose = false,
 		mode = "profile",
+		searchMode = "memories",
+		searchLimit = 10,
 		addMemory = "never",
 		baseUrl,
 		promptTemplate,
@@ -237,6 +227,8 @@ export const createSupermemoryContext = (
 		containerTag,
 		conversationId,
 		mode,
+		searchMode,
+		searchLimit,
 		addMemory,
 		normalizedBaseUrl,
 		apiKey,
@@ -298,6 +290,7 @@ export const transformParamsWithMemory = async (
 		containerTag: ctx.containerTag,
 		conversationId: ctx.conversationId,
 		mode: ctx.mode,
+		searchMode: ctx.searchMode,
 		isNewTurn,
 		cacheHit: false,
 	})
@@ -312,6 +305,8 @@ export const transformParamsWithMemory = async (
 		apiKey: ctx.apiKey,
 		logger: ctx.logger,
 		promptTemplate: ctx.promptTemplate,
+		searchMode: ctx.searchMode,
+		searchLimit: ctx.searchLimit,
 	})
 
 	ctx.memoryCache.set(turnKey, memories)

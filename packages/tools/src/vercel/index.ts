@@ -13,8 +13,6 @@ import {
 import type { PromptTemplate, MemoryPromptData } from "./memory-prompt"
 
 interface WrapVercelLanguageModelOptions {
-	/** Optional conversation ID to group messages for contextual memory generation */
-	conversationId?: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -24,6 +22,15 @@ interface WrapVercelLanguageModelOptions {
 	 * - "full": Combines both profile and query-based results
 	 */
 	mode?: "profile" | "query" | "full"
+	/**
+	 * Search mode for memory retrieval:
+	 * - "memories": Search only memory entries (default)
+	 * - "hybrid": Search both memories AND document chunks (recommended for RAG)
+	 * - "documents": Search only document chunks
+	 */
+	searchMode?: "memories" | "hybrid" | "documents"
+	/** Maximum number of search results to return when using hybrid/documents mode (default: 10) */
+	searchLimit?: number
 	/**
 	 * Memory persistence mode:
 	 * - "always": Automatically save conversations as memories
@@ -65,11 +72,13 @@ interface WrapVercelLanguageModelOptions {
  *
  * @param model - The language model to wrap with supermemory capabilities (V2 or V3)
  * @param containerTag - The container tag/identifier for memory search (e.g., user ID, project ID)
+ * @param conversationId - Conversation ID to group messages into a single document (maps to customId in Supermemory). Ensures related messages are added to the same document rather than creating new ones.
  * @param options - Optional configuration options for the middleware
- * @param options.conversationId - Optional conversation ID to group messages into a single document for contextual memory generation
  * @param options.verbose - Optional flag to enable detailed logging of memory search and injection process (default: false)
  * @param options.mode - Optional mode for memory search: "profile", "query", or "full" (default: "profile")
- * @param options.addMemory - Optional mode for memory search: "always", "never" (default: "never")
+ * @param options.searchMode - Optional search mode: "memories" (default), "hybrid" (memories + chunks), or "documents" (chunks only)
+ * @param options.searchLimit - Optional maximum number of search results when using hybrid/documents mode (default: 10)
+ * @param options.addMemory - Optional mode for memory persistence: "always", "never" (default: "never")
  * @param options.apiKey - Optional Supermemory API key to use instead of the environment variable
  * @param options.baseUrl - Optional base URL for the Supermemory API (default: "https://api.supermemory.ai")
  *
@@ -80,15 +89,22 @@ interface WrapVercelLanguageModelOptions {
  * import { withSupermemory } from "@supermemory/tools/ai-sdk"
  * import { openai } from "@ai-sdk/openai"
  *
- * const modelWithMemory = withSupermemory(openai("gpt-4"), "user-123", {
- *   conversationId: "conversation-456",
+ * // Basic usage with profile memories
+ * const modelWithMemory = withSupermemory(openai("gpt-4"), "user-123", "conv-456", {
  *   mode: "full",
  *   addMemory: "always"
  * })
  *
+ * // RAG usage with hybrid search (memories + document chunks)
+ * const ragModel = withSupermemory(openai("gpt-4"), "user-123", "conv-789", {
+ *   mode: "full",
+ *   searchMode: "hybrid",  // Search both memories and document chunks
+ *   searchLimit: 15,
+ * })
+ *
  * const result = await generateText({
- *   model: modelWithMemory,
- *   messages: [{ role: "user", content: "What's my favorite programming language?" }]
+ *   model: ragModel,
+ *   messages: [{ role: "user", content: "What's in my documents about quarterly goals?" }]
  * })
  * ```
  *
@@ -98,6 +114,7 @@ interface WrapVercelLanguageModelOptions {
 const wrapVercelLanguageModel = <T extends LanguageModel>(
 	model: T,
 	containerTag: string,
+	conversationId: string,
 	options?: WrapVercelLanguageModelOptions,
 ): T => {
 	const providedApiKey = options?.apiKey ?? process.env.SUPERMEMORY_API_KEY
@@ -111,9 +128,11 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 	const ctx = createSupermemoryContext({
 		containerTag,
 		apiKey: providedApiKey,
-		conversationId: options?.conversationId,
+		conversationId,
 		verbose: options?.verbose ?? false,
 		mode: options?.mode ?? "profile",
+		searchMode: options?.searchMode ?? "memories",
+		searchLimit: options?.searchLimit ?? 10,
 		addMemory: options?.addMemory ?? "never",
 		baseUrl: options?.baseUrl,
 		promptTemplate: options?.promptTemplate,
