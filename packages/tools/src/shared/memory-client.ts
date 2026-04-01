@@ -252,6 +252,11 @@ export const buildMemoriesText = async (
 			generalSearchMemories = `Search results for user's recent message:\n${generalSearchMemories}`
 		}
 
+		rawSearchResults = searchResponse.results.map((r) => ({
+			memory: r.memory || r.chunk || "",
+			metadata: r.metadata,
+		}))
+
 		if (mode !== "query") {
 			const profileResponse = await supermemoryProfileSearch(
 				containerTag,
