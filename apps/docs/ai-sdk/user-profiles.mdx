@@ -50,6 +50,7 @@ All of this happens transparently - you write code as if using a normal model, b
   
   ```typescript
   const model = withSupermemory(openai("gpt-5"), "user-123", {
+    conversationId: "conv-1",
     addMemory: "always"
   })
   ```

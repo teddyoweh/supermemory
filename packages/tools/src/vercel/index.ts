@@ -13,8 +13,8 @@ import {
 import type { PromptTemplate, MemoryPromptData } from "./memory-prompt"
 
 interface WrapVercelLanguageModelOptions {
-	/** Conversation ID to group messages into a single document (maps to customId in Supermemory). Ensures related messages are added to the same document rather than creating new ones. */
-	conversationId: string
+	/** Conversation ID to group messages into a single document (maps to customId in Supermemory). Required when addMemory is "always". */
+	conversationId?: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -35,8 +35,8 @@ interface WrapVercelLanguageModelOptions {
 	searchLimit?: number
 	/**
 	 * Memory persistence mode:
-	 * - "always": Automatically save conversations as memories
-	 * - "never": Only retrieve memories, don't store new ones
+	 * - "always": Automatically save conversations as memories (requires conversationId)
+	 * - "never": Only retrieve memories, don't store new ones (default)
 	 */
 	addMemory?: "always" | "never"
 	/** Supermemory API key (falls back to SUPERMEMORY_API_KEY env var) */
@@ -80,7 +80,7 @@ interface WrapVercelLanguageModelOptions {
  * @param options.mode - Optional mode for memory search: "profile", "query", or "full" (default: "profile")
  * @param options.searchMode - Optional search mode: "memories" (default), "hybrid" (memories + chunks), or "documents" (chunks only)
  * @param options.searchLimit - Optional maximum number of search results when using hybrid/documents mode (default: 10)
- * @param options.addMemory - Optional mode for memory persistence: "always", "never" (default: "never")
+ * @param options.addMemory - Optional mode for memory persistence: "always" (requires conversationId), "never" (default)
  * @param options.apiKey - Optional Supermemory API key to use instead of the environment variable
  * @param options.baseUrl - Optional base URL for the Supermemory API (default: "https://api.supermemory.ai")
  *
@@ -118,7 +118,7 @@ interface WrapVercelLanguageModelOptions {
 const wrapVercelLanguageModel = <T extends LanguageModel>(
 	model: T,
 	containerTag: string,
-	options: WrapVercelLanguageModelOptions,
+	options?: WrapVercelLanguageModelOptions,
 ): T => {
 	const providedApiKey = options?.apiKey ?? process.env.SUPERMEMORY_API_KEY
 
@@ -128,10 +128,16 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 		)
 	}
 
+	if ((options?.addMemory ?? "never") === "always" && !options?.conversationId) {
+		throw new Error(
+			"conversationId is required when addMemory is \"always\" — provide it via options.conversationId to group messages into a single document",
+		)
+	}
+
 	const ctx = createSupermemoryContext({
 		containerTag,
 		apiKey: providedApiKey,
-		conversationId: options.conversationId,
+		conversationId: options?.conversationId,
 		verbose: options?.verbose ?? false,
 		mode: options?.mode ?? "profile",
 		searchMode: options?.searchMode ?? "memories",
@@ -152,7 +158,7 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 				const result = await model.doGenerate(transformedParams as any)
 
 				const userMessage = getLastUserMessage(params)
-				if (ctx.addMemory === "always" && userMessage && userMessage.trim()) {
+				if (ctx.addMemory === "always" && ctx.conversationId && userMessage && userMessage.trim()) {
 					const assistantResponseText = extractAssistantResponseText(
 						result.content as unknown[],
 					)
@@ -202,6 +208,7 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 						const userMessage = getLastUserMessage(params)
 						if (
 							ctx.addMemory === "always" &&
+							ctx.conversationId &&
 							userMessage &&
 							userMessage.trim()
 						) {

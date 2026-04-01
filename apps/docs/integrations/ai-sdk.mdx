@@ -48,6 +48,7 @@ const result = await generateText({
 
   ```typescript
   const modelWithMemory = withSupermemory(openai("gpt-5"), "user-123", {
+    conversationId: "conv-1",
     addMemory: "always"
   })
   ```

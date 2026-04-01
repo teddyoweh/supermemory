@@ -144,8 +144,8 @@ interface SupermemoryMiddlewareOptions {
 	containerTag: string
 	/** Supermemory API key */
 	apiKey: string
-	/** Conversation ID to group messages into a single document (maps to customId in Supermemory) */
-	conversationId: string
+	/** Conversation ID to group messages into a single document (maps to customId in Supermemory). Required when addMemory is "always". */
+	conversationId?: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -180,7 +180,7 @@ interface SupermemoryMiddlewareContext {
 	client: Supermemory
 	logger: Logger
 	containerTag: string
-	conversationId: string
+	conversationId?: string
 	mode: MemoryMode
 	searchMode: SearchMode
 	searchLimit: number
