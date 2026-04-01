@@ -169,15 +169,17 @@ const formatSearchResults = (
 ): string => {
 	if (results.length === 0) return ""
 
-	const formattedResults = results.map((result) => {
-		if (result.memory) {
-			return `- ${result.memory}`
-		}
-		if (result.chunk && includeChunks) {
-			return `- [Document] ${result.chunk}`
-		}
-		return null
-	}).filter(Boolean)
+	const formattedResults = results
+		.map((result) => {
+			if (result.memory) {
+				return `- ${result.memory}`
+			}
+			if (result.chunk && includeChunks) {
+				return `- [Document] ${result.chunk}`
+			}
+			return null
+		})
+		.filter(Boolean)
 
 	return formattedResults.join("\n")
 }
@@ -216,7 +218,8 @@ export const buildMemoriesText = async (
 		logger.info("Using hybrid search mode", {
 			containerTag,
 			searchMode,
-			queryText: queryText.substring(0, 100) + (queryText.length > 100 ? "..." : ""),
+			queryText:
+				queryText.substring(0, 100) + (queryText.length > 100 ? "..." : ""),
 		})
 
 		const searchResponse = await supermemoryHybridSearch(
@@ -236,7 +239,10 @@ export const buildMemoriesText = async (
 		})
 
 		const includeChunks = searchMode === "hybrid" || searchMode === "documents"
-		generalSearchMemories = formatSearchResults(searchResponse.results, includeChunks)
+		generalSearchMemories = formatSearchResults(
+			searchResponse.results,
+			includeChunks,
+		)
 
 		if (generalSearchMemories) {
 			generalSearchMemories = `Search results for user's recent message:\n${generalSearchMemories}`

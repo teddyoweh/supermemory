@@ -20,7 +20,7 @@ import {
 } from "./util"
 import { extractQueryText, injectMemoriesIntoParams } from "./memory-prompt"
 
-const getConversationContent = (params: LanguageModelCallOptions) => {
+const _getConversationContent = (params: LanguageModelCallOptions) => {
 	return params.prompt
 		.filter((msg) => msg.role !== "system" && msg.role !== "tool")
 		.map((msg) => {
@@ -100,7 +100,7 @@ const convertToConversationMessages = (
 }
 
 export const saveMemoryAfterResponse = async (
-	client: Supermemory,
+	_client: Supermemory,
 	containerTag: string,
 	conversationId: string,
 	assistantResponseText: string,
