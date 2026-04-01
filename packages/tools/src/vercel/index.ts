@@ -13,6 +13,8 @@ import {
 import type { PromptTemplate, MemoryPromptData } from "./memory-prompt"
 
 interface WrapVercelLanguageModelOptions {
+	/** Conversation ID to group messages into a single document (maps to customId in Supermemory). Ensures related messages are added to the same document rather than creating new ones. */
+	conversationId: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -72,8 +74,8 @@ interface WrapVercelLanguageModelOptions {
  *
  * @param model - The language model to wrap with supermemory capabilities (V2 or V3)
  * @param containerTag - The container tag/identifier for memory search (e.g., user ID, project ID)
- * @param conversationId - Conversation ID to group messages into a single document (maps to customId in Supermemory). Ensures related messages are added to the same document rather than creating new ones.
- * @param options - Optional configuration options for the middleware
+ * @param options - Configuration options for the middleware
+ * @param options.conversationId - Conversation ID to group messages into a single document (maps to customId in Supermemory)
  * @param options.verbose - Optional flag to enable detailed logging of memory search and injection process (default: false)
  * @param options.mode - Optional mode for memory search: "profile", "query", or "full" (default: "profile")
  * @param options.searchMode - Optional search mode: "memories" (default), "hybrid" (memories + chunks), or "documents" (chunks only)
@@ -90,13 +92,15 @@ interface WrapVercelLanguageModelOptions {
  * import { openai } from "@ai-sdk/openai"
  *
  * // Basic usage with profile memories
- * const modelWithMemory = withSupermemory(openai("gpt-4"), "user-123", "conv-456", {
+ * const modelWithMemory = withSupermemory(openai("gpt-4"), "user-123", {
+ *   conversationId: "conv-456",
  *   mode: "full",
  *   addMemory: "always"
  * })
  *
  * // RAG usage with hybrid search (memories + document chunks)
- * const ragModel = withSupermemory(openai("gpt-4"), "user-123", "conv-789", {
+ * const ragModel = withSupermemory(openai("gpt-4"), "user-123", {
+ *   conversationId: "conv-789",
  *   mode: "full",
  *   searchMode: "hybrid",  // Search both memories and document chunks
  *   searchLimit: 15,
@@ -114,8 +118,7 @@ interface WrapVercelLanguageModelOptions {
 const wrapVercelLanguageModel = <T extends LanguageModel>(
 	model: T,
 	containerTag: string,
-	conversationId: string,
-	options?: WrapVercelLanguageModelOptions,
+	options: WrapVercelLanguageModelOptions,
 ): T => {
 	const providedApiKey = options?.apiKey ?? process.env.SUPERMEMORY_API_KEY
 
@@ -128,7 +131,7 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 	const ctx = createSupermemoryContext({
 		containerTag,
 		apiKey: providedApiKey,
-		conversationId,
+		conversationId: options.conversationId,
 		verbose: options?.verbose ?? false,
 		mode: options?.mode ?? "profile",
 		searchMode: options?.searchMode ?? "memories",
