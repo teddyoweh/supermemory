@@ -213,6 +213,7 @@ export const buildMemoriesText = async (
 
 	let userMemories = ""
 	let generalSearchMemories = ""
+	let rawSearchResults: Array<{ memory: string; metadata?: Record<string, unknown> }> = []
 
 	if (useHybridSearch && queryText) {
 		logger.info("Using hybrid search mode", {
@@ -327,12 +328,13 @@ export const buildMemoriesText = async (
 						.map((memory) => `- ${memory}`)
 						.join("\n")}`
 				: ""
+		rawSearchResults = memoriesResponse.searchResults?.results ?? []
 	}
 
 	const promptData: MemoryPromptData = {
 		userMemories,
 		generalSearchMemories,
-		searchResults: memoriesResponse.searchResults?.results ?? [],
+		searchResults: rawSearchResults,
 	}
 
 	const memories = promptTemplate(promptData)
