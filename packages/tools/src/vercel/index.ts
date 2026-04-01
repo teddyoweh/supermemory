@@ -128,9 +128,12 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 		)
 	}
 
-	if ((options?.addMemory ?? "never") === "always" && !options?.conversationId) {
+	if (
+		(options?.addMemory ?? "never") === "always" &&
+		!options?.conversationId
+	) {
 		throw new Error(
-			"conversationId is required when addMemory is \"always\" — provide it via options.conversationId to group messages into a single document",
+			'conversationId is required when addMemory is "always" — provide it via options.conversationId to group messages into a single document',
 		)
 	}
 
@@ -158,7 +161,12 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 				const result = await model.doGenerate(transformedParams as any)
 
 				const userMessage = getLastUserMessage(params)
-				if (ctx.addMemory === "always" && ctx.conversationId && userMessage && userMessage.trim()) {
+				if (
+					ctx.addMemory === "always" &&
+					ctx.conversationId &&
+					userMessage &&
+					userMessage.trim()
+				) {
 					const assistantResponseText = extractAssistantResponseText(
 						result.content as unknown[],
 					)
