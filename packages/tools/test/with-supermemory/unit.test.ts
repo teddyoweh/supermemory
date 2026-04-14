@@ -73,7 +73,11 @@ describe("Unit: withSupermemory", () => {
 			const mockModel = createMockLanguageModel()
 
 			expect(() => {
-				withSupermemory(mockModel, TEST_CONFIG.containerTag)
+				withSupermemory({
+					model: mockModel,
+					containerTag: TEST_CONFIG.containerTag,
+					customId: "test-conv-123",
+				})
 			}).toThrow("SUPERMEMORY_API_KEY is not set")
 		})
 
@@ -81,7 +85,11 @@ describe("Unit: withSupermemory", () => {
 			process.env.SUPERMEMORY_API_KEY = "test-key"
 
 			const mockModel = createMockLanguageModel()
-			const wrappedModel = withSupermemory(mockModel, TEST_CONFIG.containerTag)
+			const wrappedModel = withSupermemory({
+				model: mockModel,
+				containerTag: TEST_CONFIG.containerTag,
+				customId: "test-conv-456",
+			})
 
 			expect(wrappedModel).toBeDefined()
 			expect(wrappedModel.specificationVersion).toBe("v2")
@@ -106,6 +114,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-cache-123",
 				mode: "profile",
 			})
 
@@ -138,6 +147,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-continuation-456",
 				mode: "profile",
 			})
 
@@ -210,6 +220,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-refetch-789",
 				mode: "profile",
 			})
 
@@ -270,6 +281,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-error-101",
 				mode: "profile",
 			})
 
@@ -291,6 +303,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-empty-102",
 				mode: "query",
 			})
 
@@ -308,6 +321,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-empty-content-103",
 				mode: "query",
 			})
 
@@ -335,6 +349,7 @@ describe("Unit: withSupermemory", () => {
 			const ctx = createSupermemoryContext({
 				containerTag: TEST_CONFIG.containerTag,
 				apiKey: TEST_CONFIG.apiKey,
+				customId: "test-mutate-104",
 				mode: "profile",
 			})
 

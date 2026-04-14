@@ -314,12 +314,11 @@
     },
     "packages/tools": {
       "name": "@supermemory/tools",
-      "version": "1.4.1",
+      "version": "1.5.0",
       "dependencies": {
         "@ai-sdk/anthropic": "^2.0.25",
         "@ai-sdk/openai": "^2.0.23",
         "ai": "^5.0.29",
-        "lru-cache": "^11.2.6",
         "openai": "^4.104.0",
         "supermemory": "^3.0.0-alpha.26",
         "zod": "^4.1.5",

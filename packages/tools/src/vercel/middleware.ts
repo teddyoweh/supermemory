@@ -102,7 +102,7 @@ const convertToConversationMessages = (
 export const saveMemoryAfterResponse = async (
 	_client: Supermemory,
 	containerTag: string,
-	conversationId: string,
+	customId: string,
 	assistantResponseText: string,
 	params: LanguageModelCallOptions,
 	logger: Logger,
@@ -116,7 +116,7 @@ export const saveMemoryAfterResponse = async (
 		)
 
 		const response = await addConversation({
-			conversationId,
+			conversationId: customId,
 			messages: conversationMessages,
 			containerTags: [containerTag],
 			apiKey,
@@ -125,7 +125,7 @@ export const saveMemoryAfterResponse = async (
 
 		logger.info("Conversation saved successfully via /v4/conversations", {
 			containerTag,
-			conversationId,
+			customId,
 			messageCount: conversationMessages.length,
 			responseId: response.id,
 		})
@@ -144,8 +144,8 @@ interface SupermemoryMiddlewareOptions {
 	containerTag: string
 	/** Supermemory API key */
 	apiKey: string
-	/** Conversation ID to group messages into a single document (maps to customId in Supermemory). Required when addMemory is "always". */
-	conversationId?: string
+	/** Custom ID to group messages into a single document. Required. */
+	customId: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -180,7 +180,7 @@ interface SupermemoryMiddlewareContext {
 	client: Supermemory
 	logger: Logger
 	containerTag: string
-	conversationId?: string
+	customId: string
 	mode: MemoryMode
 	searchMode: SearchMode
 	searchLimit: number
@@ -201,7 +201,7 @@ export const createSupermemoryContext = (
 	const {
 		containerTag,
 		apiKey,
-		conversationId,
+		customId,
 		verbose = false,
 		mode = "profile",
 		searchMode = "memories",
@@ -225,7 +225,7 @@ export const createSupermemoryContext = (
 		client,
 		logger,
 		containerTag,
-		conversationId,
+		customId,
 		mode,
 		searchMode,
 		searchLimit,
@@ -247,7 +247,7 @@ const makeTurnKey = (
 ): string => {
 	return MemoryCache.makeTurnKey(
 		ctx.containerTag,
-		ctx.conversationId,
+		ctx.customId,
 		ctx.mode,
 		userMessage,
 	)
@@ -288,7 +288,7 @@ export const transformParamsWithMemory = async (
 
 	ctx.logger.info("Starting memory search", {
 		containerTag: ctx.containerTag,
-		conversationId: ctx.conversationId,
+		customId: ctx.customId,
 		mode: ctx.mode,
 		searchMode: ctx.searchMode,
 		isNewTurn,

@@ -12,9 +12,13 @@ import {
 } from "./middleware"
 import type { PromptTemplate, MemoryPromptData } from "./memory-prompt"
 
-interface WrapVercelLanguageModelOptions {
-	/** Conversation ID to group messages into a single document (maps to customId in Supermemory). Required when addMemory is "always". */
-	conversationId?: string
+interface WrapVercelLanguageModelOptions<T extends LanguageModel> {
+	/** The language model to wrap with supermemory capabilities */
+	model: T
+	/** The container tag/identifier for memory search (e.g., user ID, project ID) */
+	containerTag: string
+	/** Custom ID to group messages into a single document. Required. */
+	customId: string
 	/** Enable detailed logging of memory search and injection */
 	verbose?: boolean
 	/**
@@ -35,8 +39,8 @@ interface WrapVercelLanguageModelOptions {
 	searchLimit?: number
 	/**
 	 * Memory persistence mode:
-	 * - "always": Automatically save conversations as memories (requires conversationId)
-	 * - "never": Only retrieve memories, don't store new ones (default)
+	 * - "always": Automatically save conversations as memories (default)
+	 * - "never": Only retrieve memories, don't store new ones
 	 */
 	addMemory?: "always" | "never"
 	/** Supermemory API key (falls back to SUPERMEMORY_API_KEY env var) */
@@ -72,15 +76,15 @@ interface WrapVercelLanguageModelOptions {
  * Supports both Vercel AI SDK 5 (LanguageModelV2) and SDK 6 (LanguageModelV3) via runtime
  * detection of `model.specificationVersion`.
  *
- * @param model - The language model to wrap with supermemory capabilities (V2 or V3)
- * @param containerTag - The container tag/identifier for memory search (e.g., user ID, project ID)
- * @param options - Configuration options for the middleware
- * @param options.conversationId - Conversation ID to group messages into a single document (maps to customId in Supermemory)
+ * @param options - Configuration object containing model and Supermemory options
+ * @param options.model - The language model to wrap with supermemory capabilities (V2 or V3)
+ * @param options.containerTag - Required. The container tag/identifier for memory search (e.g., user ID, project ID)
+ * @param options.customId - Required. Custom ID to group messages into a single document
  * @param options.verbose - Optional flag to enable detailed logging of memory search and injection process (default: false)
  * @param options.mode - Optional mode for memory search: "profile", "query", or "full" (default: "profile")
  * @param options.searchMode - Optional search mode: "memories" (default), "hybrid" (memories + chunks), or "documents" (chunks only)
  * @param options.searchLimit - Optional maximum number of search results when using hybrid/documents mode (default: 10)
- * @param options.addMemory - Optional mode for memory persistence: "always" (requires conversationId), "never" (default)
+ * @param options.addMemory - Optional mode for memory persistence: "always" (default - saves conversations), "never" (read-only mode)
  * @param options.apiKey - Optional Supermemory API key to use instead of the environment variable
  * @param options.baseUrl - Optional base URL for the Supermemory API (default: "https://api.supermemory.ai")
  *
@@ -88,19 +92,24 @@ interface WrapVercelLanguageModelOptions {
  *
  * @example
  * ```typescript
- * import { withSupermemory } from "@supermemory/tools/ai-sdk"
+ * import { withSupermemory } from "@supermemory/tools/vercel"
  * import { openai } from "@ai-sdk/openai"
+ * import { generateText } from "ai"
  *
  * // Basic usage with profile memories
- * const modelWithMemory = withSupermemory(openai("gpt-4"), "user-123", {
- *   conversationId: "conv-456",
+ * const modelWithMemory = withSupermemory({
+ *   model: openai("gpt-4"),
+ *   containerTag: "user-123",
+ *   customId: "conv-456",
  *   mode: "full",
  *   addMemory: "always"
  * })
  *
  * // RAG usage with hybrid search (memories + document chunks)
- * const ragModel = withSupermemory(openai("gpt-4"), "user-123", {
- *   conversationId: "conv-789",
+ * const ragModel = withSupermemory({
+ *   model: openai("gpt-4"),
+ *   containerTag: "user-123",
+ *   customId: "conv-789",
  *   mode: "full",
  *   searchMode: "hybrid",  // Search both memories and document chunks
  *   searchLimit: 15,
@@ -116,11 +125,10 @@ interface WrapVercelLanguageModelOptions {
  * @throws {Error} When supermemory API request fails
  */
 const wrapVercelLanguageModel = <T extends LanguageModel>(
-	model: T,
-	containerTag: string,
-	options?: WrapVercelLanguageModelOptions,
+	options: WrapVercelLanguageModelOptions<T>,
 ): T => {
-	const providedApiKey = options?.apiKey ?? process.env.SUPERMEMORY_API_KEY
+	const { model, containerTag, customId, ...restOptions } = options
+	const providedApiKey = restOptions.apiKey ?? process.env.SUPERMEMORY_API_KEY
 
 	if (!providedApiKey) {
 		throw new Error(
@@ -128,26 +136,17 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 		)
 	}
 
-	if (
-		(options?.addMemory ?? "never") === "always" &&
-		!options?.conversationId
-	) {
-		throw new Error(
-			'conversationId is required when addMemory is "always" — provide it via options.conversationId to group messages into a single document',
-		)
-	}
-
 	const ctx = createSupermemoryContext({
 		containerTag,
 		apiKey: providedApiKey,
-		conversationId: options?.conversationId,
-		verbose: options?.verbose ?? false,
-		mode: options?.mode ?? "profile",
-		searchMode: options?.searchMode ?? "memories",
-		searchLimit: options?.searchLimit ?? 10,
-		addMemory: options?.addMemory ?? "never",
-		baseUrl: options?.baseUrl,
-		promptTemplate: options?.promptTemplate,
+		customId,
+		verbose: restOptions.verbose ?? false,
+		mode: restOptions.mode ?? "profile",
+		searchMode: restOptions.searchMode ?? "memories",
+		searchLimit: restOptions.searchLimit ?? 10,
+		addMemory: restOptions.addMemory ?? "always",
+		baseUrl: restOptions.baseUrl,
+		promptTemplate: restOptions.promptTemplate,
 	})
 
 	const wrappedModel = {
@@ -163,7 +162,7 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 				const userMessage = getLastUserMessage(params)
 				if (
 					ctx.addMemory === "always" &&
-					ctx.conversationId &&
+					ctx.customId &&
 					userMessage &&
 					userMessage.trim()
 				) {
@@ -173,7 +172,7 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 					saveMemoryAfterResponse(
 						ctx.client,
 						ctx.containerTag,
-						ctx.conversationId,
+						ctx.customId,
 						assistantResponseText,
 						params,
 						ctx.logger,
@@ -216,14 +215,14 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 						const userMessage = getLastUserMessage(params)
 						if (
 							ctx.addMemory === "always" &&
-							ctx.conversationId &&
+							ctx.customId &&
 							userMessage &&
 							userMessage.trim()
 						) {
 							saveMemoryAfterResponse(
 								ctx.client,
 								ctx.containerTag,
-								ctx.conversationId,
+								ctx.customId,
 								generatedText,
 								params,
 								ctx.logger,
