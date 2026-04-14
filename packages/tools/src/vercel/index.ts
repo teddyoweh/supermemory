@@ -122,6 +122,7 @@ interface WrapVercelLanguageModelOptions<T extends LanguageModel> {
  * ```
  *
  * @throws {Error} When neither `options.apiKey` nor `process.env.SUPERMEMORY_API_KEY` are set
+ * @throws {Error} When `options.customId` is empty or invalid
  * @throws {Error} When supermemory API request fails
  */
 const wrapVercelLanguageModel = <T extends LanguageModel>(
@@ -133,6 +134,13 @@ const wrapVercelLanguageModel = <T extends LanguageModel>(
 	if (!providedApiKey) {
 		throw new Error(
 			"SUPERMEMORY_API_KEY is not set — provide it via `options.apiKey` or set `process.env.SUPERMEMORY_API_KEY`",
+		)
+	}
+
+	// Validate customId is not empty
+	if (!customId || typeof customId !== "string" || customId.trim() === "") {
+		throw new Error(
+			"customId is required and must be a non-empty string — provide it via `options.customId`",
 		)
 	}
 
