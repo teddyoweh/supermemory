@@ -13,17 +13,27 @@ async function testMiddleware() {
 	console.log("=== Middleware ===")
 
 	// Basic wrapper
-	const model = withSupermemory(openai("gpt-4"), "user-123")
+	const model = withSupermemory({
+		model: openai("gpt-4"),
+		containerTag: "user-123",
+		customId: "conv-001",
+	})
 	console.log("✓ withSupermemory basic")
 
 	// With addMemory option
-	const modelWithAdd = withSupermemory(openai("gpt-4"), "user-123", {
+	const modelWithAdd = withSupermemory({
+		model: openai("gpt-4"),
+		containerTag: "user-123",
+		customId: "conv-002",
 		addMemory: "always",
 	})
 	console.log("✓ withSupermemory with addMemory")
 
 	// With verbose logging
-	const modelVerbose = withSupermemory(openai("gpt-4"), "user-123", {
+	const modelVerbose = withSupermemory({
+		model: openai("gpt-4"),
+		containerTag: "user-123",
+		customId: "conv-003",
 		verbose: true,
 	})
 	console.log("✓ withSupermemory with verbose")
@@ -32,17 +42,26 @@ async function testMiddleware() {
 async function testSearchModes() {
 	console.log("\n=== Search Modes ===")
 
-	const profileModel = withSupermemory(openai("gpt-4"), "user-123", {
+	const profileModel = withSupermemory({
+		model: openai("gpt-4"),
+		containerTag: "user-123",
+		customId: "conv-004",
 		mode: "profile",
 	})
 	console.log("✓ mode: profile")
 
-	const queryModel = withSupermemory(openai("gpt-4"), "user-123", {
+	const queryModel = withSupermemory({
+		model: openai("gpt-4"),
+		containerTag: "user-123",
+		customId: "conv-005",
 		mode: "query",
 	})
 	console.log("✓ mode: query")
 
-	const fullModel = withSupermemory(openai("gpt-4"), "user-123", {
+	const fullModel = withSupermemory({
+		model: openai("gpt-4"),
+		containerTag: "user-123",
+		customId: "conv-006",
 		mode: "full",
 	})
 	console.log("✓ mode: full")
@@ -61,14 +80,13 @@ async function testCustomPrompt() {
 </context>
 `.trim()
 
-	const model = withSupermemory(
-		anthropic("claude-3-sonnet-20240229"),
-		"user-123",
-		{
-			mode: "full",
-			promptTemplate: claudePrompt,
-		},
-	)
+	const model = withSupermemory({
+		model: anthropic("claude-3-sonnet-20240229"),
+		containerTag: "user-123",
+		customId: "conv-007",
+		mode: "full",
+		promptTemplate: claudePrompt,
+	})
 	console.log("✓ Custom prompt template")
 }
 
@@ -76,14 +94,21 @@ async function testTools() {
 	console.log("\n=== Memory Tools ===")
 
 	// All tools
-	const tools = supermemoryTools("YOUR_API_KEY")
+	const tools = supermemoryTools({
+		apiKey: "YOUR_API_KEY",
+	})
 	console.log("✓ supermemoryTools")
 
 	// Individual tools
-	const searchTool = searchMemoriesTool("API_KEY", { projectId: "personal" })
+	const searchTool = searchMemoriesTool({
+		apiKey: "API_KEY",
+		projectId: "personal",
+	})
 	console.log("✓ searchMemoriesTool")
 
-	const addTool = addMemoryTool("API_KEY")
+	const addTool = addMemoryTool({
+		apiKey: "API_KEY",
+	})
 	console.log("✓ addMemoryTool")
 
 	// Combined
@@ -91,7 +116,7 @@ async function testTools() {
 		searchMemories: searchTool,
 		addMemory: addTool,
 	}
-	console.log("✓ Combined tools object")
+	console.log("✓ Combined tools object", Object.keys(toolsObj))
 }
 
 async function main() {
